@@ -79,8 +79,6 @@ def print_ips(ips):
         else:
             print ip + "   -   " + name
 
-
-
 def main():
     parser = ArgumentParser()
     parser.add_argument("-s", dest="snet", help="Performs a ping sweep on a subnet")
