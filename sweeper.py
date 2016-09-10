@@ -12,30 +12,6 @@ def get_local_ip():
     s.close()
     return ip
 
-parser = ArgumentParser()
-parser.add_argument("-s", dest="snet", help="Performs a ping sweep on a subnet")
-parser.add_argument("-n", dest="net", help="Performs a ping sweep on network")
-parser.add_argument("--localsubnet", dest="ls", action="store_true", help="Performs a ping sweep on local subnet")
-parser.add_argument("--localnetwork", dest="ln", action="store_true", help="Performs a ping sweep on local network")
-
-arguments = parser.parse_args()
-ips = []
-
-ip = ""
-
-if arguments.snet is not None:
-    ip = arguments.snet
-elif arguments.net is not None:
-    ip = arguments.net
-elif arguments.ls is True:
-    ip = get_local_ip()
-    split_ip = ip.split(".")
-    ip = split_ip[0] + "." + split_ip[1] + "." + split_ip[2]
-    print ip
-
-
-
-
 def pinger(job_q, results_q):
     DEVNULL = open(os.devnull,'w')
     while True:
@@ -50,6 +26,7 @@ def pinger(job_q, results_q):
             pass
 
 def subnet_sweep(subnet):
+    ips = []
     pool_size = 255
 
     jobs = multiprocessing.Queue()
@@ -74,36 +51,57 @@ def subnet_sweep(subnet):
         ip = results.get()
         ips.append(str(ip))
 
-    ips.sort()
+    return ips
 
 def network_sweep(network):
+    ips = []
     for x in range(1, 255):
-        subnet_sweep(network + "." + str(x))
+        sn_ips = subnet_sweep(network + "." + str(x))
+        for ip in sn_ips:
+            ips.append(ip)
         print network + "." + str(x) + " sweeped"
-    ips.sort()
+
+    return ips
 
 def get_hostname(ip):
     try:
-        return gethostbyaddr(ip)
+        return socket.gethostbyaddr(ip)
     except socket.herror:
         return None, None, None
 
+def print_ips(ips):
+    ips.sort()
 
-subnet = raw_input("Type in a subnet (ex: 141.209.1): ")
+    for ip in ips:
+        name, alias, addresslist = get_hostname(ip)
+        if name is None:
+            print ip + "   -   " + "hostname not found"
+        else:
+            print ip + "   -   " + name
 
-subnet_sweep(subnet)
 
-ips_and_hostnames = {}
 
-for ip in ips:
-    name, alias, addresslist = get_hostname(ip)
-    if name == None:
-        ips_and_hostnames[ip] = "hostname not found"
-    else:
-        ips_and_hostnames[ip] = name
+def main():
+    parser = ArgumentParser()
+    parser.add_argument("-s", dest="snet", help="Performs a ping sweep on a subnet")
+    parser.add_argument("-n", dest="net", help="Performs a ping sweep on network")
+    parser.add_argument("--localsubnet", dest="ls", action="store_true", help="Performs a ping sweep on local subnet")
+    parser.add_argument("--localnetwork", dest="ln", action="store_true", help="Performs a ping sweep on local network")
+    arguments = parser.parse_args()
 
-print "address         hostname"
-print "------------------------"
+    if len(sys.argv) == 1:
+        parser.error("No arguments given.  Please choose a ping sweep.")
 
-for k, v in ips_and_hostnames.iteritems():
-    print k + " - " + v
+    if arguments.snet is not None:
+        print_ips(subnet_sweep(arguments.snet))
+    elif arguments.net is not None:
+        print_ips(network_sweep(arguments.net))
+    elif arguments.ls is True:
+        split_ip = get_local_ip().split(".")
+        print_ips(subnet_sweep(split_ip[0] + "." + split_ip[1] + "." + split_ip[2]))
+    elif arguments.ln is True:
+        split_ip = get_local_ip().split(".")
+        print_ips(network_sweep(split_ip[0] + "." + split_ip[1]))
+
+if __name__ == "__main__":
+    main()
