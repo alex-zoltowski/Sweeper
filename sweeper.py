@@ -1,27 +1,40 @@
 import multiprocessing
 import subprocess
 import os
-from socket import socket
+import socket
 from argparse import ArgumentParser
 import sys
 
-parser = ArgumentParser("ping.py -h\n       ping.py -s 141.209.100\n       ping.py -n 141.209\n       ping.py --localsubnet\n       ping.py --localnetwork\n\n")
-#parser = ArgumentParser()
-parser.add_argument("-s", dest="snet", help="Performs a ping sweep on a subnet")
-parser.add_argument("-n", dest="net", help="Performs a ping sweep on network")
-parser.add_argument("--localsubnet", action="store_true", help="Performs a ping sweep on local subnet")
-parser.add_argument("--localnetwork", action="store_true", help="Performs a ping sweep on local network")
-
-arguments = parser.parse_args()
-
-ips = []
-
 def get_local_ip():
-    s = socket(AF_INET, SOCK_DGRAM)
+    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     s.connect(("gmail.com",80))
     ip = s.getsockname()[0]
     s.close()
     return ip
+
+parser = ArgumentParser()
+parser.add_argument("-s", dest="snet", help="Performs a ping sweep on a subnet")
+parser.add_argument("-n", dest="net", help="Performs a ping sweep on network")
+parser.add_argument("--localsubnet", dest="ls", action="store_true", help="Performs a ping sweep on local subnet")
+parser.add_argument("--localnetwork", dest="ln", action="store_true", help="Performs a ping sweep on local network")
+
+arguments = parser.parse_args()
+ips = []
+
+ip = ""
+
+if arguments.snet is not None:
+    ip = arguments.snet
+elif arguments.net is not None:
+    ip = arguments.net
+elif arguments.ls is True:
+    ip = get_local_ip()
+    split_ip = ip.split(".")
+    ip = split_ip[0] + "." + split_ip[1] + "." + split_ip[2]
+    print ip
+
+
+
 
 def pinger(job_q, results_q):
     DEVNULL = open(os.devnull,'w')
@@ -66,7 +79,7 @@ def subnet_sweep(subnet):
 def network_sweep(network):
     for x in range(1, 255):
         subnet_sweep(network + "." + str(x))
-        print network + "." + str(x) + ".0/24 sweeped"
+        print network + "." + str(x) + " sweeped"
     ips.sort()
 
 def get_hostname(ip):
