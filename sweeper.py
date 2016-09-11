@@ -1,3 +1,4 @@
+#!/usr/bin/python
 import multiprocessing
 import subprocess
 import os
@@ -59,7 +60,7 @@ def network_sweep(network):
         sn_ips = subnet_sweep(network + "." + str(x))
         for ip in sn_ips:
             ips.append(ip)
-        print network + "." + str(x) + " sweeped"
+        print network + "." + str(x) + " swept"
 
     return ips
 
